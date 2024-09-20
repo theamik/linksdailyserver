@@ -1,11 +1,11 @@
 
-import User from "../models/user";
-import { hashPassword, comparePassword } from "../helpers/auth";
+import User from "../models/user.js";
+import { hashPassword, comparePassword } from "../helpers/auth.js";
 import jwt from "jsonwebtoken";
 import nanoid from "nanoid";
-
+import dotenv from "dotenv";
 // sendgrid
-require("dotenv").config();
+dotenv.config();
 // const sgMail = require("@sendgrid/mail");
 // sgMail.setApiKey(process.env.SENDGRID_KEY);
 
