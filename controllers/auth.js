@@ -1,13 +1,26 @@
-
 import User from "../models/user.js";
 import { hashPassword, comparePassword } from "../helpers/auth.js";
 import jwt from "jsonwebtoken";
 import nanoid from "nanoid";
 import dotenv from "dotenv";
+import expressJwt from "express-jwt";
+import cloudinary from "cloudinary";
+
 // sendgrid
 dotenv.config();
 // const sgMail = require("@sendgrid/mail");
 // sgMail.setApiKey(process.env.SENDGRID_KEY);
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key: process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET,
+});
+
+export const requireSignin = expressJwt({
+  secret: process.env.JWT_SECRET,
+  algorithms: ["HS256"],
+});
 
 export const signup = async (req, res) => {
   console.log("HIT SIGNUP");
@@ -117,7 +130,7 @@ export const forgotPassword = async (req, res) => {
     from: process.env.EMAIL_FROM,
     to: user.email,
     subject: "Password reset code",
-    html: "<h1>Your password  reset code is: {resetCode}</h1>"
+    html: "<h1>Your password  reset code is: {resetCode}</h1>",
   };
   // send email
   try {
@@ -153,5 +166,54 @@ export const resetPassword = async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.log(err);
+  }
+};
+
+export const uploadImage = async (req, res) => {
+  try {
+    const result = await cloudinary.uploader.upload(req.body.image, {
+      folder: "profile_images",
+      public_id: `profile_${req.user._id}`,
+      resource_type: "jpg",
+    });
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        image: {
+          public_id: result.public_id,
+          url: result.secure_url,
+        },
+      },
+      { new: true }
+    );
+    return res.json({
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      role: user.role,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const updatePassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 6) {
+      return res.json({
+        error: "Password is required and should be 6 characters long",
+      });
+    } else {
+      const hashedPassword = await hashPassword(password);
+      const user = await User.findByIdAndUpdate(req.user._id, {
+        password: hashedPassword,
+      });
+      user.password = undefined;
+      user.secret = undefined;
+      return res.json(user);
+    }
+  } catch (error) {
+    console.log(error);
   }
 };
