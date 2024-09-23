@@ -5,6 +5,7 @@ import nanoid from "nanoid";
 import dotenv from "dotenv";
 import expressJwt from "express-jwt";
 import cloudinary from "cloudinary";
+import sendMail from "../sendMail.js";
 
 // sendgrid
 dotenv.config();
@@ -116,7 +117,7 @@ export const forgotPassword = async (req, res) => {
   const { email } = req.body;
   // find user by email
   const user = await User.findOne({ email });
-  console.log("USER ===> ", user);
+  // console.log("USER ===> ", user);
   if (!user) {
     return res.json({ error: "User not found" });
   }
@@ -126,18 +127,32 @@ export const forgotPassword = async (req, res) => {
   user.resetCode = resetCode;
   user.save();
   // prepare email
-  const emailData = {
-    from: process.env.EMAIL_FROM,
-    to: user.email,
-    subject: "Password reset code",
-    html: "<h1>Your password  reset code is: {resetCode}</h1>",
-  };
+  // const emailData = {
+  //   from: process.env.EMAIL_FROM,
+  //   to: user.email,
+  //   subject: "Password reset code",
+  //   html: "<h1>Your password  reset code is: {resetCode}</h1>",
+  // };
   // send email
+  // try {
+  //   const data = await sgMail.send(emailData);
+  //   console.log(data);
+  //   res.json({ ok: true });
+  // } catch (err) {
+  //   console.log(err);
+  //   res.json({ ok: false });
+  // }
+
   try {
-    const data = await sgMail.send(emailData);
-    console.log(data);
-    res.json({ ok: true });
-  } catch (err) {
+    await sendMail({
+      email: user.email,
+      subject: "Reset code for password reset",
+      message: `Hello ${user.name},
+       Enter your app below reset code for password recovery:
+        ${resetCode} `,
+    });
+    res.status(201).json({ ok: true });
+  } catch (error) {
     console.log(err);
     res.json({ ok: false });
   }
